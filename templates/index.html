@@ -1,0 +1,164 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BG Zero - Tách nền siêu cấp</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+  <style>
+    #side-by-side {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    #side-by-side div {
+      flex: 1;
+      min-width: 300px;
+      max-width: 500px;
+      text-align: center;
+    }
+    #side-by-side img {
+      width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BG Zero</h1>
+    <p>Xóa nền ảnh chuyên nghiệp, thông minh</p>
+  </header>
+
+  <main>
+    <div id="upload-area">
+      <form id="uploadForm" method="post" enctype="multipart/form-data">
+        <input type="file" name="image" id="imageInput" accept="image/*">
+        <label for="imageInput">Chọn ảnh để tách nền</label>
+        <div id="preview"></div>
+        <button type="submit" id="removeBtn">Tách nền thông minh</button>
+      </form>
+      <div id="loading" style="display:none">🔄 Đang xử lý... xin chờ một chút...</div>
+    </div>
+
+    <div id="result-area" style="display:none">
+      <h2>Kết quả</h2>
+      <div id="side-by-side">
+        <div>
+          <h3>Ảnh gốc</h3>
+          <div id="originalImage"></div>
+        </div>
+        <div>
+          <h3>Ảnh đã tách nền</h3>
+          <img id="outputImg" src="">
+        </div>
+      </div>
+
+      <div id="download-options">
+        <p>Tải về với độ phân giải:</p>
+        <button class="res-btn" data-res="360">360p (Miễn phí)</button>
+        <button class="res-btn" data-res="720">720p (Tạm thời miễn phí)</button>
+        <button class="res-btn" data-res="1080">1080p (Tạm thời miễn phí)</button>
+        <button class="res-btn premium" data-res="2k">2K</button>
+        <button class="res-btn premium" data-res="4k">4K</button>
+      </div>
+
+      <div id="premium-popup" style="display:none">
+        <p>Đây là chức năng Premium. Vui lòng thanh toán để tải với độ phân giải cao.</p>
+        <button onclick="checkoutPaypal()">Thanh toán bằng PayPal</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 BG Zero. Made with ❤️ in Vietnam. Donate me at.</p>
+    <div id="ads">[Quảng cáo sẽ xuất hiện ở đây]</div>
+    <div id="contact">
+      <p>📬 Hợp tác quảng cáo: <a href="mailto:bgzero.contact@gmail.com?subject=Hợp tác quảng cáo&body=Chào BG Zero, tôi muốn đặt quảng cáo trên trang web của bạn. Chi tiết như sau:">bgzero.contact@gmail.com</a></p>
+    </div>
+  </footer>
+
+  <script>
+    const imageInput = document.getElementById('imageInput');
+    const preview = document.getElementById('preview');
+    const removeBtn = document.getElementById('removeBtn');
+    const outputImg = document.getElementById('outputImg');
+    const resultArea = document.getElementById('result-area');
+    const downloadButtons = document.querySelectorAll('.res-btn');
+    const premiumPopup = document.getElementById('premium-popup');
+    const uploadForm = document.getElementById('uploadForm');
+    const loading = document.getElementById('loading');
+    const originalImage = document.getElementById('originalImage');
+
+    let uploadedFile = null;
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (file) {
+        uploadedFile = file;
+        const reader = new FileReader();
+        reader.onload = e => {
+          preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+          originalImage.innerHTML = `<img src="${e.target.result}" alt="Original">`;
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!uploadedFile) return alert('Vui lòng chọn ảnh trước.');
+
+      const formData = new FormData();
+      formData.append('image', uploadedFile);
+
+      loading.style.display = 'block';
+      resultArea.style.display = 'none';
+
+      const res = await fetch('/smart-upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      loading.style.display = 'none';
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        outputImg.src = url;
+        resultArea.style.display = 'block';
+        anime({
+          targets: '#result-area',
+          opacity: [0, 1],
+          translateY: [50, 0],
+          duration: 800,
+          easing: 'easeOutExpo'
+        });
+      } else {
+        alert('Ảnh không hợp lệ hoặc quá nhỏ. Vui lòng chọn ảnh rõ nét, kích thước lớn hơn 100x100px.');
+      }
+    });
+
+    downloadButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const res = btn.getAttribute('data-res');
+        if (btn.classList.contains('premium')) {
+          premiumPopup.style.display = 'block';
+        } else {
+          const a = document.createElement('a');
+          a.href = outputImg.src;
+          a.download = `output_${res}.png`;
+          a.click();
+        }
+      });
+    });
+
+    function checkoutPaypal() {
+      alert('Chức năng thanh toán PayPal sẽ được tích hợp sau.');
+    }
+  </script>
+</body>
+</html>
